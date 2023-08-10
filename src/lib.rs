@@ -18,23 +18,22 @@ use data::{
 };
 
 fn store_initial_data(env: &Env, purchase_trading: &PurchaseTrading, seller: &Address) {
-    env.storage().persistent().set(&PRUCHASE_TRADING, purchase_trading);
-    env.storage().persistent().set(&PROPIETARY, seller);
-    env.storage().persistent().set(&CURRENT_STATE, &STATE_WAITING_FIRST_PAYMENT);
+    env.storage().instance().set(&PRUCHASE_TRADING, purchase_trading);
+    env.storage().instance().set(&PROPIETARY, seller);
+    env.storage().instance().set(&CURRENT_STATE, &STATE_WAITING_FIRST_PAYMENT);
 
-    env.storage().persistent().bump(&PRUCHASE_TRADING, PURCHASE_DATA_TTL);
-    env.storage().persistent().bump(&PROPIETARY, PURCHASE_DATA_TTL);
-    env.storage().persistent().bump(&CURRENT_STATE, PURCHASE_DATA_TTL);
+    env.storage().instance().bump(PURCHASE_DATA_TTL);
+
 }
 
 fn get_purchase_trading(env: &Env) -> Option<PurchaseTrading> {
-    let purchase_trading = env.storage().persistent().get::<Symbol, PurchaseTrading>(&PRUCHASE_TRADING);
+    let purchase_trading = env.storage().instance().get::<Symbol, PurchaseTrading>(&PRUCHASE_TRADING);
     purchase_trading
 }
 
 fn set_state_as_first_payment_sent(env: &Env) {
-    env.storage().persistent().set(&CURRENT_STATE, &STATE_FIRST_PAYMENT_SENT);
-    env.storage().persistent().bump(&CURRENT_STATE, PURCHASE_DATA_TTL);
+    env.storage().instance().set(&CURRENT_STATE, &STATE_FIRST_PAYMENT_SENT);
+    env.storage().instance().bump(PURCHASE_DATA_TTL);
 }
 
 fn get_meeting_accepted(env: &Env) -> Option<Meeting> {
@@ -43,23 +42,27 @@ fn get_meeting_accepted(env: &Env) -> Option<Meeting> {
 }
 
 fn store_final_data(env: &Env, buyer: &Address) {
-    env.storage().persistent().set(&CURRENT_STATE, &STATE_REST_OF_PAYMENT_SENT);
-    env.storage().persistent().set(&PROPIETARY, buyer);
-    env.storage().persistent().remove(&MEETING_ACCEPTED);
+    env.storage().instance().set(&CURRENT_STATE, &STATE_REST_OF_PAYMENT_SENT);
+    env.storage().instance().set(&PROPIETARY, buyer);
+    env.storage().temporary().remove(&MEETING_ACCEPTED);
 
-    env.storage().persistent().bump(&CURRENT_STATE, PURCHASE_DATA_TTL);
-    env.storage().persistent().bump(&PROPIETARY, PURCHASE_DATA_TTL);
+    env.storage().instance().bump(PURCHASE_DATA_TTL);
+
 }
 
 fn store_meeting_key(env: &Env, meeting: Meeting, ts: u64) {
     env.storage().temporary().set(&MEETING_ACCEPTED, &meeting);
     let ts_diff = ts - env.ledger().timestamp();
     let ts_days_diff = (ts_diff / 3600) as u32;
-    let bump = (ts_days_diff / DAY_BUMP_AMOUNT) + (DAY_BUMP_AMOUNT / 2); // Add some time extra
+    let bump = (ts_days_diff / DAY_BUMP_AMOUNT) + (DAY_BUMP_AMOUNT / 2); // Add half a day more
     if bump > 0 {
         env.storage().temporary().bump(&MEETING_ACCEPTED, bump);
     }
-    
+}
+
+fn get_current_state(env: &Env) -> Symbol {
+    let state = env.storage().instance().get(&CURRENT_STATE).unwrap_or(symbol_short!(""));
+    state
 }
 
 
@@ -103,7 +106,7 @@ impl HousePurchaseContract {
 
     pub fn seller_propose_meeting(env: Env, seller: Address, ts: u64) -> Result<bool, Error> {
         seller.require_auth();
-        let state = env.storage().persistent().get(&CURRENT_STATE).unwrap_or(symbol_short!(""));
+        let state = get_current_state(&env);
         if state != STATE_FIRST_PAYMENT_SENT {
             return Err(Error::MeetingCanNotBeProposedIfFirstPaymentHaveNotBeenSent);
         }
