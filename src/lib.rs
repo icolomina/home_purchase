@@ -147,7 +147,7 @@ impl HousePurchaseContract {
             return Err(Error::MeetingNotAcceptedYet);
         }
 
-        let purchase_trading: PurchaseTrading = get_purchase_trading(&env).unwrap(); // Here we are sure PurchaseTrading is stored so we can unwrap with no fear about panic
+        let purchase_trading: PurchaseTrading = get_purchase_trading(&env).unwrap(); 
         let rest_of_payment = purchase_trading.amount - purchase_trading.first_payment;
 
         let tk = token::Client::new(&env, &purchase_trading.token);
