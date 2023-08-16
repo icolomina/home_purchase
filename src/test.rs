@@ -57,9 +57,9 @@ fn test_success() {
     let test_data = init_test_data(&env, true);
     env.ledger().with_mut(|li| { li.timestamp = 12345; });
 
-    assert_eq!(test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415")), true);
-    assert_eq!(test_data.client.transfer_first_payment(&test_data.buyer), true);
-    assert_eq!(test_data.client.seller_propose_meeting(&test_data.seller, &12349), true);
+    assert_eq!(test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415")), true);
+    assert_eq!(test_data.client.transfer_first_payment(), true);
+    assert_eq!(test_data.client.seller_propose_meeting(&12349), true);
 
     let meeting = Meeting { ts: 12349 };
     let last_events = vec![&env, env.events().all().pop_back().unwrap()];
@@ -75,11 +75,21 @@ fn test_success() {
         ]
     );
 
-    assert_eq!(test_data.client.buyer_review_meeting(&test_data.seller, &12349, &true), true);
+    assert_eq!(test_data.client.buyer_review_meeting(&12349, &true), true);
 
     env.ledger().with_mut(|li| { li.timestamp = 12354; });
-    assert_eq!(test_data.client.transfer_rest_of_payment(&test_data.buyer), 35000)
+    assert_eq!(test_data.client.transfer_rest_of_payment(), 35000);
+    assert_eq!(test_data.sac_token.balance(&test_data.seller), 40001);
 
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Contract, #8)")]
+fn test_purchase_already_init() {
+    let env = Env::default();
+    let test_data = init_test_data(&env, false);
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &4000, &40000, &symbol_short!("256997415"));
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &4000, &40000, &symbol_short!("256997415"));
 }
 
 #[test]
@@ -87,7 +97,7 @@ fn test_success() {
 fn test_first_payment_greather_or_equal_amount() {
     let env = Env::default();
     let test_data = init_test_data(&env, false);
-    test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &40000, &40000, &symbol_short!("256997415"));
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &40000, &40000, &symbol_short!("256997415"));
 }
 
 #[test]
@@ -95,8 +105,8 @@ fn test_first_payment_greather_or_equal_amount() {
 fn test_propose_meeting_without_having_sent_first_payment() {
     let env = Env::default();
     let test_data = init_test_data(&env, false);
-    test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
-    test_data.client.seller_propose_meeting(&test_data.seller, &12349);
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
+    test_data.client.seller_propose_meeting(&12349);
 }
 
 #[test]
@@ -105,10 +115,10 @@ fn test_meeting_cannot_be_proposed_before_current_date() {
     let env = Env::default();
     let test_data = init_test_data(&env, true);
     env.ledger().with_mut(|li| { li.timestamp = 12345; });
-    test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
-    test_data.client.transfer_first_payment(&test_data.buyer);
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
+    test_data.client.transfer_first_payment();
 
-    test_data.client.seller_propose_meeting(&test_data.seller, &12341);
+    test_data.client.seller_propose_meeting(&12341);
 }
 
 #[test]
@@ -118,12 +128,12 @@ fn test_meeting_already_accepted() {
     let test_data = init_test_data(&env, true);
 
     env.ledger().with_mut(|li| { li.timestamp = 12345; });
-    test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
-    test_data.client.transfer_first_payment(&test_data.buyer);
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
+    test_data.client.transfer_first_payment();
 
-    test_data.client.seller_propose_meeting(&test_data.seller, &12347);
-    test_data.client.buyer_review_meeting(&test_data.buyer, &12347, &true);
-    test_data.client.seller_propose_meeting(&test_data.seller, &12348);
+    test_data.client.seller_propose_meeting(&12347);
+    test_data.client.buyer_review_meeting(&12347, &true);
+    test_data.client.seller_propose_meeting(&12348);
 }
 
 #[test]
@@ -132,14 +142,14 @@ fn test_transfer_rest_of_payment_before_meeting() {
     let env = Env::default();
     let test_data = init_test_data(&env, true);
 
-    env.ledger().with_mut(|li| { li.timestamp = 12345; });
-    test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
-    test_data.client.transfer_first_payment(&test_data.buyer);
+    env.ledger().with_mut(|li: &mut soroban_sdk::testutils::LedgerInfo| { li.timestamp = 12345; });
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
+    test_data.client.transfer_first_payment();
 
-    test_data.client.seller_propose_meeting(&test_data.seller, &12347);
-    test_data.client.buyer_review_meeting(&test_data.buyer, &12347, &true);
+    test_data.client.seller_propose_meeting(&12347);
+    test_data.client.buyer_review_meeting(&12347, &true);
 
-    test_data.client.transfer_rest_of_payment(&test_data.buyer);
+    test_data.client.transfer_rest_of_payment();
 
 }
 
@@ -150,10 +160,10 @@ fn test_transfer_rest_of_payment_without_meeting_accepted() {
     let test_data = init_test_data(&env, true);
 
     env.ledger().with_mut(|li| { li.timestamp = 12345; });
-    test_data.client.real_state_trading(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
-    test_data.client.transfer_first_payment(&test_data.buyer);
-    test_data.client.seller_propose_meeting(&test_data.seller, &12347);
-    test_data.client.transfer_rest_of_payment(&test_data.buyer);
+    test_data.client.initialize(&test_data.buyer, &test_data.seller, &test_data.sac_token.address, &5000, &40000, &symbol_short!("256997415"));
+    test_data.client.transfer_first_payment();
+    test_data.client.seller_propose_meeting(&12347);
+    test_data.client.transfer_rest_of_payment();
 }
 
 #[test]
@@ -161,5 +171,5 @@ fn test_transfer_rest_of_payment_without_meeting_accepted() {
 fn test_transfer_first_payment_with_no_purchase_data_stored() {
     let env = Env::default();
     let test_data = init_test_data(&env, true);
-    test_data.client.transfer_first_payment(&test_data.buyer);
+    test_data.client.transfer_first_payment();
 }

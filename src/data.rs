@@ -23,7 +23,8 @@ pub enum Error {
     MeetingNotAcceptedYet = 4,
     PurchaseDataNotStored = 5,
     MeetingCannotBeProposedBeforeCurrentDate = 6,
-    MeetingCanNotBeProposedIfFirstPaymentHaveNotBeenSent = 7
+    MeetingCanNotBeProposedIfFirstPaymentHaveNotBeenSent = 7,
+    PurchaseDataAlreadyInit = 8
 }
 
 #[contracttype]

@@ -27,7 +27,7 @@ fn store_initial_data(env: &Env, purchase_trading: &PurchaseTrading, seller: &Ad
 }
 
 fn get_purchase_trading(env: &Env) -> Option<PurchaseTrading> {
-    let purchase_trading = env.storage().instance().get::<Symbol, PurchaseTrading>(&PRUCHASE_TRADING);
+    let purchase_trading = env.storage().instance().get(&PRUCHASE_TRADING);
     purchase_trading
 }
 
@@ -72,7 +72,11 @@ pub struct HousePurchaseContract;
 #[contractimpl]
 impl HousePurchaseContract {
 
-    pub fn real_state_trading(env: Env, buyer: Address, seller: Address, token: Address, first_payment: i128, amount: i128, key: Symbol) -> Result<bool, Error> {
+    pub fn initialize(env: Env, buyer: Address, seller: Address, token: Address, first_payment: i128, amount: i128, key: Symbol) -> Result<bool, Error> {
+
+        if let Some(_purchase_trading) = get_purchase_trading(&env) {
+            return Err(Error::PurchaseDataAlreadyInit);
+        }
 
         if amount <= first_payment {
             return Err(Error::FirstPaymentGreaterThanOrEqualAmount);
@@ -91,8 +95,7 @@ impl HousePurchaseContract {
         Ok(true)
     }
 
-    pub fn transfer_first_payment(env: Env, buyer: Address) -> Result<bool, Error> {
-        buyer.require_auth();
+    pub fn transfer_first_payment(env: Env) -> Result<bool, Error> {
         if let Some(purchase_trading) = get_purchase_trading(&env) {
             let tk = token::Client::new(&env, &purchase_trading.token);
             tk.transfer(&purchase_trading.buyer, &purchase_trading.seller, &purchase_trading.first_payment);
@@ -104,8 +107,7 @@ impl HousePurchaseContract {
         
     }
 
-    pub fn seller_propose_meeting(env: Env, seller: Address, ts: u64) -> Result<bool, Error> {
-        seller.require_auth();
+    pub fn seller_propose_meeting(env: Env, ts: u64) -> Result<bool, Error> {
         let state = get_current_state(&env);
         if state != STATE_FIRST_PAYMENT_SENT {
             return Err(Error::MeetingCanNotBeProposedIfFirstPaymentHaveNotBeenSent);
@@ -125,8 +127,7 @@ impl HousePurchaseContract {
         }
     }
 
-    pub fn buyer_review_meeting(env: Env, buyer: Address, ts: u64, accept: bool) -> bool {
-        buyer.require_auth();
+    pub fn buyer_review_meeting(env: Env, ts: u64, accept: bool) -> bool {
         if accept {
             let meeting = Meeting { ts };
             store_meeting_key(&env, meeting, ts);
@@ -136,8 +137,7 @@ impl HousePurchaseContract {
         }
     }
 
-    pub fn transfer_rest_of_payment(env: Env, buyer: Address) -> Result<i128, Error> {
-        buyer.require_auth();
+    pub fn transfer_rest_of_payment(env: Env) -> Result<i128, Error> {
         if let Some(mta) = get_meeting_accepted(&env) {
             let current_ts = env.ledger().timestamp();
             if !mta.is_meeting_taking_place(current_ts)  {
