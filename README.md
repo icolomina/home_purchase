@@ -4,7 +4,14 @@ This soroban smart contract contains the rules to manage a house purchase betwee
 ## Build the contract
 
 - Install Soroban and Rust SDK following the instructions [here](https://soroban.stellar.org/docs/getting-started/setup)
-- To build the contract, execute the following from the contract root folder
+- Test the contract. To do it, execute the following command from the contract root folder:
+
+```
+cargo test
+```
+This will compile and execute tests. After checking they are successfull, you can generate the wasm file
+  
+- To generate the wasm file, execute the following from the contract root folder
 
 ```shell
 soroban contract build
