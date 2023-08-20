@@ -81,3 +81,7 @@ In this case, after getting purchase_trading we also add *purchase_trading.buyer
 As you can see in the code, the **initialize** methods receives and store the token address by which the transfers will be made. This means that a Soroban token (those contracts which follows the [TokenInterface](https://soroban.stellar.org/docs/reference/interfaces/token-interface)) must be deployed so we can get an contract id and sent it to the **initialize** function. Furthermore, the buyer and the seller addresses must be minted with tokens.
 
 As a token, the [soroban token example](https://github.com/stellar/soroban-examples/tree/v0.9.2/token) can be used.
+
+## Tutorial
+
+You can read [this tutorial](https://dev.to/icolomina/creating-a-dapp-using-php-and-a-house-purchase-soroban-smart-contract-38f1) which show how you could use the [php stellar sdk](https://github.com/Soneso/stellar-php-sdk/blob/main/soroban.md) to build a dapp using php and interacting with this contract.
