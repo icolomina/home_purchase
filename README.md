@@ -9,7 +9,7 @@ This soroban smart contract contains the rules to manage a house purchase betwee
 ```
 cargo test
 ```
-This will compile and execute tests. After checking they are successfull, you can generate the wasm file
+This will compile and execute tests. After checking they are successful, you can generate the wasm file
   
 - To generate the wasm file, execute the following from the contract root folder
 
@@ -17,7 +17,33 @@ This will compile and execute tests. After checking they are successfull, you ca
 soroban contract build
 ```
 
-After that, you will be able to deploy and install it. You can see how to use soroban-cli to deploy contracts in the [docs](https://soroban.stellar.org/docs/getting-started/hello-world)
+After that, you will be able to deploy and install it. You can see how to use soroban-cli to deploy contracts in the [docs](https://soroban.stellar.org/docs/getting-started/hello-world). 
+Before deploying the contract you will need to create a user. You can do it using "soroban config":
+
+```shell
+soroban config identity generate --global <your_user_name>
+```
+The above simple command will create a user. If you want to see the user's public key you can execute:
+
+```shell
+soroban config identity address <your_user_name>
+```
+And for showing the private key you can use:
+
+```shell
+soroban config identity show <your_user_name>
+```
+When you have the user ready, add a network using the following command:
+
+```shell
+soroban config network add --global futurenet --rpc-url https://rpc-futurenet.stellar.org:443 --network-passphrase "Test SDF Future Network ; October 2022"
+```
+
+And now, you can deploy as following:
+
+```shell
+soroban contract deploy --wasm target/wasm32-unknown-unknown/release/<your_wams_file>.wasm --source the_owner --network futurenet
+```
 
 ## Contract functions
 
