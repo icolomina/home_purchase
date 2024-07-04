@@ -1,3 +1,6 @@
+# Deprecated
+This repository has been deprecated. New repository is: https://github.com/icolomina/soroban-contracts
+
 # home_purchase
 This soroban smart contract contains the rules to manage a house purchase between a buyer and a seller.
 
